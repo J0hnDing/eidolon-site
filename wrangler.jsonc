@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "eidolon-site",
+  "name": "eidolon",
   "compatibility_date": "2026-09-02",
 
   "assets": {
