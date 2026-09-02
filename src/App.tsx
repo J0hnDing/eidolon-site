@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import {
   ArrowRight,
@@ -21,29 +21,13 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { useState } from 'react'
 import { InView, TextReveal, TraceLine } from './components/MotionPrimitives'
 
 const EIDOLON_GITHUB = 'https://github.com/J0hnDing/Personal-self-evolving-assistant'
 const ATLAS_GITHUB = 'https://github.com/J0hnDing/eidolon-atlas'
 const CONTACT_EMAIL = 'dingjh0602@gmail.com'
-
-function ScrollToTop() {
-  const { pathname, hash } = useLocation()
-  useEffect(() => {
-    const titles: Record<string, string> = {
-      '/': 'Eidolon — Your agent, under your control',
-      '/privacy': 'Privacy policy — Eidolon',
-      '/terms': 'Terms of service — Eidolon',
-    }
-    document.title = titles[pathname] ?? 'Page not found — Eidolon'
-
-    if (hash) return
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [pathname, hash])
-  return null
-}
 
 function Logo() {
   return (
@@ -56,9 +40,12 @@ function Logo() {
 
 function SectionLink({ id, children, className, onSelect }: { id: string; children: ReactNode; className?: string; onSelect?: () => void }) {
   const location = useLocation()
-  const href = location.pathname === '/' ? `#${id}` : `/#${id}`
 
-  return <a className={className} href={href} onClick={onSelect}>{children}</a>
+  if (location.pathname !== '/') {
+    return <Link className={className} to={`/#${id}`} onClick={onSelect}>{children}</Link>
+  }
+
+  return <a className={className} href={`#${id}`} onClick={onSelect}>{children}</a>
 }
 
 function Header() {
@@ -75,10 +62,12 @@ function Header() {
           {open ? <X size={19} /> : <Menu size={19} />}
         </button>
         <nav className={open ? 'nav-links is-open' : 'nav-links'} aria-label="Main navigation">
+          <SectionLink id="top" onSelect={() => setOpen(false)}>Home</SectionLink>
           <SectionLink id="how-it-works" onSelect={() => setOpen(false)}>How it works</SectionLink>
           <SectionLink id="atlas" onSelect={() => setOpen(false)}>Atlas</SectionLink>
           <SectionLink id="contact" onSelect={() => setOpen(false)}>Contact</SectionLink>
           <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
           <a className="nav-source" href={EIDOLON_GITHUB} target="_blank" rel="noreferrer">
             Source <ArrowUpRight size={14} />
           </a>
@@ -243,17 +232,8 @@ function AtlasVisual() {
 }
 
 function HomePage() {
-  useEffect(() => {
-    const id = window.location.hash.slice(1)
-    if (!id) return
-    const timer = window.setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ block: 'start' })
-    }, 200)
-    return () => window.clearTimeout(timer)
-  }, [])
-
   return (
-    <main>
+    <main id="top">
       <section className="hero section-shell">
         <div className="ambient-rings" aria-hidden="true"><span /><span /><span /><span /></div>
         <div className="hero-copy">
@@ -387,16 +367,21 @@ function HomePage() {
 }
 
 const privacySections = [
-  ['Overview', 'This website is an informational website for the open-source Eidolon and Eidolon Atlas projects. It does not provide a hosted Eidolon account or cloud agent service. The software itself is designed to run locally on infrastructure you control.'],
-  ['Information this website collects', 'This site does not include account registration, payment processing, advertising cookies, contact forms, or client-side analytics. Like most websites, the infrastructure used to host it may temporarily process standard request information such as IP address, browser type, requested page, and timestamp for delivery, reliability, and security.'],
-  ['Local product data', 'When you run Eidolon or Atlas, your project state and personal data are stored in your local installation according to each project’s documentation and settings. Atlas encrypts personal content at rest. Eidolon uses explicit local memory rather than silently saving every conversation. We do not receive that local data merely because you use the open-source software.'],
-  ['Third-party integrations', 'You may choose to connect Eidolon to third-party services. Data sent to or received from those services is governed by your configuration, the permissions you approve, and the third party’s own privacy terms. Review the requested scope before authorizing any integration.'],
+  ['Overview', 'This policy applies to the Eidolon website and the open-source Eidolon and Eidolon Atlas applications. The website is informational and does not provide hosted Eidolon accounts. Eidolon is designed to run locally on infrastructure you control; using the open-source software does not by itself send your local project or Atlas data to us.'],
+  ['Google account data accessed', 'If you choose to connect Google, Eidolon requests OpenID identity and email information to identify the authorized account. Calendar separately requests the calendar.events.owned scope. Gmail separately requests the restricted gmail.modify scope. Calendar and Gmail use independent grants and may be connected to different Google accounts. Eidolon does not access Google data until you initiate a connection and approve the requested Google consent screen.'],
+  ['Google Calendar data and use', 'Calendar functions are fixed to the connected account’s primary calendar. At your request, Eidolon may list or retrieve events and process event identifiers, status, title, description, location, start and end times, recurrence, related event identifiers, Google Calendar links, and created or updated timestamps. It may also create, update, or delete events when an approved function requests that operation. Eidolon uses this data only to provide the Calendar feature you invoked.'],
+  ['Gmail data and use', 'At your request, Eidolon may search Gmail, retrieve a bounded conversation, read new Primary Inbox messages, mark selected messages as read, or send a plain-text email after the required approval. Data processed may include message and conversation identifiers, sender and recipient headers, subject, date, snippet, text body, unread state, and attachment filename, MIME type, and size. Eidolon does not download attachment contents and uses Gmail data only to provide the email feature you invoked.'],
+  ['Storage and protection', 'Google OAuth client secrets and refresh tokens are stored in the operating system credential store. The local database stores only opaque secret references, verified account email and identifier, connection status, and timestamps. Access tokens are created for individual provider calls and are not persisted or returned to generated code. The integration layer does not maintain a separate Calendar or Gmail content database or cache. Provider calls pass through a backend-enforced, schema-validated capability boundary, and audit records exclude message bodies, event content, OAuth responses, and tokens.'],
+  ['Local outputs', 'Google data is processed locally and returned in bounded, normalized form to the Eidolon function, web application, or Codex tool you explicitly invoke. Eidolon does not automatically mirror Google event or email content. If you choose to include Google data in a generated skill’s output, local run history, project record, or another user-directed artifact, that copy is retained locally under the controls and retention behavior of that feature.'],
+  ['Sharing and transfers', 'We do not sell Google user data, use it for advertising, or disclose it to data brokers or information resellers. Google data is transferred only as necessary to provide a feature you request—for example, to Google to perform the selected operation, to the locally running Eidolon component you invoked, or to a model service when an explicitly approved workflow requires that service to complete your request. For an approved email send, if you configured Telegram as the approval channel, the reason, recipients, subject, and complete bounded plain-text body are sent to Telegram’s cloud service before Gmail execution. Third-party processing is governed by your configuration and the applicable provider terms.'],
+  ['Google API Limited Use', 'Eidolon’s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. Google Workspace API data is not used to develop, improve, or train generalized, non-personalized, or other AI or machine-learning models. It is not used for targeted advertising, credit-worthiness, lending, retargeting, or building an unrelated user database.'],
+  ['Retention and deletion', 'Calendar and Gmail refresh credentials, account metadata, and connection timestamps are retained locally until you disconnect or replace the relevant connection. Access tokens and OAuth callback state are temporary. Disconnecting Calendar or Gmail deletes Eidolon’s local grant and connection record for that service; it does not disconnect the other service or revoke access at Google. You may also revoke Eidolon from your Google Account’s third-party access settings. Any Google data you deliberately retained in a local skill output or other artifact must be deleted through that feature’s local controls. Sanitized audit records may retain operation identifiers, status, timestamps, and bounded resource identifiers, but not event or message content.'],
+  ['Website information', 'This site does not include account registration, payment processing, advertising cookies, contact forms, or client-side analytics. Like most websites, its hosting infrastructure may temporarily process standard request information such as IP address, browser type, requested page, and timestamp for delivery, reliability, and security.'],
   ['Cookies and tracking', 'The current site does not set optional analytics or advertising cookies and does not use cross-site tracking. A hosting provider may use strictly necessary technical mechanisms to deliver and protect the site.'],
-  ['Sharing and sale of data', 'We do not sell personal information or share it for targeted advertising. Information may be disclosed only when required to operate or secure the website, comply with applicable law, or protect the rights and safety of users and the projects.'],
-  ['Retention and security', 'Any standard hosting logs are controlled by the hosting provider and should be retained only for operational and security purposes. No system is perfectly secure; keep your local installation updated, protect your passphrases, and maintain encrypted backups where appropriate.'],
-  ['Your choices', 'Because the current site has no user accounts or profile database, there is ordinarily no website profile to access, correct, or delete. For local product data, use the controls provided by your own installation. For activity on GitHub, use GitHub’s account and privacy controls.'],
-  ['Changes to this policy', 'We may update this policy when the website, project, or applicable requirements change. Material changes will be reflected by a new effective date on this page.'],
-  ['Contact', 'Questions or concerns can be raised through the Eidolon project’s public GitHub issue tracker. Do not include secrets, passphrases, or other sensitive personal data in a public issue.'],
+  ['Other integrations', 'You may choose to connect Eidolon to services other than Google. Data sent to or received from those services is governed by your configuration, the exact permissions you approve, and each provider’s privacy terms. Review the requested scope before authorizing an integration.'],
+  ['Your choices', 'You control whether Google Calendar or Gmail is connected and which Eidolon functions receive approval to use them. You may disconnect either service independently, choose a different account, revoke access through Google, delete locally retained outputs, or stop using the integration. Because the website has no user account database, there is ordinarily no website profile to access, correct, or delete.'],
+  ['Changes to this policy', 'We may update this policy when the website, project, integrations, or applicable requirements change. Material changes will be reflected by a new effective date on this page.'],
+  ['Contact', 'Privacy questions or deletion concerns can be sent to dingjh0602@gmail.com or raised through the Eidolon project’s public GitHub issue tracker. Do not include OAuth tokens, passphrases, message content, or other sensitive personal data in a public issue.'],
 ]
 
 const termsSections = [
@@ -422,7 +407,7 @@ function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
         <p className="section-label">LEGAL</p>
         <h1>{isPrivacy ? 'Privacy policy' : 'Terms of service'}</h1>
         <p>{isPrivacy ? 'How the Eidolon website and open-source projects approach information.' : 'The terms for this informational website and its relationship to the open-source licenses.'}</p>
-        <span>Effective September 1, 2026</span>
+        <span>Effective {isPrivacy ? 'September 2, 2026' : 'September 1, 2026'}</span>
       </div>
       <div className="legal-layout">
         <aside>
@@ -432,7 +417,7 @@ function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
         <article>
           <div className="legal-note">
             <ShieldCheck size={18} />
-            <p>{isPrivacy ? 'Short version: this site has no accounts, ads, or product analytics. The projects are designed to keep product data in your local installation.' : 'Short version: the website is informational, the software is experimental, and the repository licenses control your open-source rights.'}</p>
+            <p>{isPrivacy ? 'Short version: Google data is accessed only after your consent, used only for features you request, protected by local credential storage and scoped controls, and never sold, used for ads, or used to train generalized AI models.' : 'Short version: the website is informational, the software is experimental, and the repository licenses control your open-source rights.'}</p>
           </div>
           {sections.map(([title, content], index) => (
             <section id={title.toLowerCase().replaceAll(' ', '-')} key={title}>
@@ -457,22 +442,69 @@ function NotFound() {
   )
 }
 
+function RouteTransition({ pathname, hash, children }: { pathname: string; hash: string; children: ReactNode }) {
+  const initialHash = useRef(hash)
+
+  useLayoutEffect(() => {
+    const titles: Record<string, string> = {
+      '/': 'Eidolon — Your agent, under your control',
+      '/privacy': 'Privacy policy — Eidolon',
+      '/terms': 'Terms of service — Eidolon',
+    }
+    document.title = titles[pathname] ?? 'Page not found — Eidolon'
+
+    const root = document.documentElement
+    const body = document.body
+    const previousRootScrollBehavior = root.style.scrollBehavior
+    const previousBodyScrollBehavior = body.style.scrollBehavior
+    root.style.scrollBehavior = 'auto'
+    body.style.scrollBehavior = 'auto'
+
+    const target = initialHash.current ? document.getElementById(initialHash.current.slice(1)) : null
+    if (target) target.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'start' })
+    else window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+
+    const frame = window.requestAnimationFrame(() => {
+      root.style.scrollBehavior = previousRootScrollBehavior
+      body.style.scrollBehavior = previousBodyScrollBehavior
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      root.style.scrollBehavior = previousRootScrollBehavior
+      body.style.scrollBehavior = previousBodyScrollBehavior
+    }
+  }, [pathname])
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.22 }}>
+      {children}
+    </motion.div>
+  )
+}
+
 function App() {
   const location = useLocation()
+
+  useEffect(() => {
+    const previous = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+    return () => {
+      window.history.scrollRestoration = previous
+    }
+  }, [])
+
   return (
     <div className="app">
-      <ScrollToTop />
       <Header />
-      <AnimatePresence mode="wait">
-        <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-          <Routes location={location}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/privacy" element={<LegalPage type="privacy" />} />
-            <Route path="/terms" element={<LegalPage type="terms" />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </motion.div>
-      </AnimatePresence>
+      <RouteTransition key={location.pathname} pathname={location.pathname} hash={location.hash}>
+        <Routes location={location}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/privacy" element={<LegalPage type="privacy" />} />
+          <Route path="/terms" element={<LegalPage type="terms" />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </RouteTransition>
       <Footer />
     </div>
   )
